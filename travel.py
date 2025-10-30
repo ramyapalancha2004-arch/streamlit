@@ -1,5 +1,8 @@
 import streamlit as st
 
+tab_names = ["Home", "Settings", "About"] 
+tabs = st.tabs(tab_names)
+
 st.set_page_config(layout="wide")
 st.title("🏖️ Travel Gallery")
 
@@ -83,4 +86,5 @@ if filtered_users:
     st.table(filtered_users)
 else:
     st.write("No users in this age range.")
+
 
