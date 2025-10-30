@@ -1,7 +1,9 @@
 import streamlit as st
 
+
 tab_names = ["Home", "Settings", "About"] 
 tabs = st.tabs(tab_names)
+
 
 st.set_page_config(layout="wide")
 st.title("🏖️ Travel Gallery")
@@ -16,9 +18,6 @@ users = [
     {"Name": "Leela", "Age": 95}, {"Name": "Raman", "Age": 100},
 ]
 
-st.sidebar.header("Select Age Range")
-age_ranges = ["0-25", "26-50", "51-75", "76-100", "All"]
-selected_range = st.sidebar.selectbox("Age Range:", age_ranges)
 
 if "open_section" not in st.session_state:
     st.session_state.open_section = None
@@ -73,18 +72,20 @@ elif st.session_state.open_section == "Info3":
         st.caption("Bali")
 
 
-if selected_range != "All":
+st.sidebar.header("Select Age Range")
+age_ranges = ["Select Age Range", "0-25", "26-50", "51-75", "76-100"]
+selected_range = st.sidebar.selectbox("Age Range:", age_ranges)
+
+
+if selected_range != "Select Age Range":
     start, end = map(int, selected_range.split("-"))
     filtered_users = [u for u in users if start <= u["Age"] <= end]
+
+    st.subheader(f" Users aged between {start} and {end}")
+    if filtered_users:
+        st.table(filtered_users)
+    else:
+        st.warning("No users found in this age range.")
 else:
-    filtered_users = users
-
-
-st.divider()
-st.subheader(f"Users in Age Range: {selected_range} yrs ({len(filtered_users)} found)")
-if filtered_users:
-    st.table(filtered_users)
-else:
-    st.write("No users in this age range.")
-
-
+    st.info("Please select an age range from the sidebar to display the users.")
+    
