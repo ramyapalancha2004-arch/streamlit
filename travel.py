@@ -1,31 +1,21 @@
 import streamlit as st
 
-
-tab_names = ["Home", "Settings", "About"]
-tabs = st.tabs(tab_names)
-
-
-
 st.set_page_config(layout="wide")
 st.title("🏖️ Travel Gallery")
 
-
 users = [
-    {"name": "Aarav", "age": 12}, {"name": "Priya", "age": 10}, {"name": "Rahul", "age": 14},
-    {"name": "Sneha", "age": 19}, {"name": "Kiran", "age": 25}, {"name": "Vikram", "age": 30},
-    {"name": "Meera", "age": 35}, {"name": "Raj", "age": 40}, {"name": "Pooja", "age": 45},
-    {"name": "Amit", "age": 50}, {"name": "Karthik", "age": 55}, {"name": "Anjali", "age": 60},
-    {"name": "Rajesh", "age": 65}, {"name": "Lakshmi", "age": 70}, {"name": "Sundar", "age": 75},
-    {"name": "Suresh", "age": 80}, {"name": "Kamala", "age": 85}, {"name": "Mohan", "age": 90},
-    {"name": "Leela", "age": 95}, {"name": "Raman", "age": 100},
+    {"Name": "Aarav", "Age": 12}, {"Name": "Priya", "Age": 10}, {"Name": "Rahul", "Age": 14},
+    {"Name": "Sneha", "Age": 19}, {"Name": "Kiran", "Age": 25}, {"Name": "Vikram", "Age": 30},
+    {"Name": "Meera", "Age": 35}, {"Name": "Raj", "Age": 40}, {"Name": "Pooja", "Age": 45},
+    {"Name": "Amit", "Age": 50}, {"Name": "Karthik", "Age": 55}, {"Name": "Anjali", "Age": 60},
+    {"Name": "Rajesh", "Age": 65}, {"Name": "Lakshmi", "Age": 70}, {"Name": "Sundar", "Age": 75},
+    {"Name": "Suresh", "Age": 80}, {"Name": "Kamala", "Age": 85}, {"Name": "Mohan", "Age": 90},
+    {"Name": "Leela", "Age": 95}, {"Name": "Raman", "Age": 100},
 ]
 
-
-with st.sidebar:
-    st.header("Select Age Range")
-    age_ranges = ["0-15", "16-25", "26-50", "51-75", "76-100", "All"]
-    selected_range = st.selectbox("Age Range:", age_ranges)
-
+st.sidebar.header("Select Age Range")
+age_ranges = ["0-25", "26-50", "51-75", "76-100", "All"]
+selected_range = st.sidebar.selectbox("Age Range:", age_ranges)
 
 if "open_section" not in st.session_state:
     st.session_state.open_section = None
@@ -50,6 +40,7 @@ with col3:
         toggle_section("Info3")
 
 st.markdown("---")  
+
 
 if st.session_state.open_section == "Info1":
     col1_1, col1_2 = st.columns(2)
@@ -78,15 +69,18 @@ elif st.session_state.open_section == "Info3":
         st.image("https://images.unsplash.com/photo-1507525428034-b723cf961d3e", use_container_width=True)
         st.caption("Bali")
 
+
 if selected_range != "All":
     start, end = map(int, selected_range.split("-"))
-    filtered_users = [u for u in users if start <= u["age"] <= end]
+    filtered_users = [u for u in users if start <= u["Age"] <= end]
 else:
     filtered_users = users
+
 
 st.divider()
 st.subheader(f"Users in Age Range: {selected_range} yrs ({len(filtered_users)} found)")
 if filtered_users:
-    st.markdown(", ".join([u['name'] for u in filtered_users]))
+    st.table(filtered_users)
 else:
     st.write("No users in this age range.")
+
