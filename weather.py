@@ -1,102 +1,146 @@
 import streamlit as st
+from streamlit_js_eval import get_geolocation
 import requests
-import pandas as pd
-import pydeck as pdk
-from datetime import datetime
 
-st.set_page_config(page_title="🌤️ Smart Weather + Map Advisor", layout="wide")
-st.title("🌤️ Smart Weather + Map Advisor")
-st.caption("Live weather, smart advice, and interactive map — IP-based detection, no JS required.")
+st.set_page_config(page_title=" WeatherSense", layout="wide")
 
-# --- Detect location ---
-lat = lon = None
-city = "Unknown"
+WEATHER_API_KEY = "65b9ebfde30d0bbd0e38a973a638f850"
 
-try:
-    location_data = requests.get("https://ipapi.co/json/", timeout=5).json()
-    lat = float(location_data.get("latitude", 17.385))
-    lon = float(location_data.get("longitude", 78.486))
-    city = location_data.get("city", "Unknown")
-    st.success(f"Approximate location from IP: {city} (Lat: {lat}, Lon: {lon})")
-except Exception:
-    st.warning("Could not detect location via IP. Please enter manually.")
+st.title(" WeatherSense — Real Feel Weather Assistant")
+st.markdown("Get *real-time weather* and *natural comfort insights* ")
+st.divider()
 
-lat = st.number_input("Latitude:", value=lat if lat else 17.385)
-lon = st.number_input("Longitude:", value=lon if lon else 78.486)
-city_input = st.text_input("City name (optional):", value=city)
+if "location_data" not in st.session_state:
+    st.session_state.location_data = None
 
-# --- Weather API ---
-API_KEY = "98c4c53a9dbd06ec77bbc029cd164faa"
-weather_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric"
+if st.session_state.location_data is None:
+    with st.spinner(" Detecting your location... please allow browser permission"):
+        loc = get_geolocation()
+        if loc:
+            st.session_state.location_data = loc
+            st.rerun()
+        else:
+            st.stop()
 
-try:
-    response = requests.get(weather_url, timeout=10).json()
-except Exception as e:
-    st.error(f"Unable to fetch weather: {e}")
+loc = st.session_state.location_data
+lat = loc.get("coords", {}).get("latitude")
+lon = loc.get("coords", {}).get("longitude")
+
+if not lat or not lon:
     st.stop()
 
-if response.get("cod") == 200:
-    name = response.get("name") or city_input
-    temp = response["main"]["temp"]
-    feels_like = response["main"]["feels_like"]
-    humidity = response["main"]["humidity"]
-    wind_speed = response["wind"]["speed"]
-    condition = response["weather"][0]["description"].title()
-    sunrise = datetime.fromtimestamp(response["sys"]["sunrise"]).strftime('%H:%M:%S')
-    sunset = datetime.fromtimestamp(response["sys"]["sunset"]).strftime('%H:%M:%S')
+st.success(f" Location detected — Latitude: {lat:.4f}, Longitude: {lon:.4f}")
 
-    col1, col2 = st.columns([1.2, 1], gap="large")
 
-    with col1:
-        st.header(f"🌦️ Weather in {name}")
-        st.metric("Temperature", f"{temp}°C", f"Feels like {feels_like}°C")
-        st.metric("Humidity", f"{humidity}%")
-        st.metric("Wind Speed", f"{wind_speed} m/s")
-        st.write(f"Condition: {condition}")
-        st.write(f"Sunrise: {sunrise} | Sunset: {sunset}")
+weather_url = (
+    f"https://api.openweathermap.org/data/2.5/weather"
+    f"?lat={lat}&lon={lon}&appid={WEATHER_API_KEY}&units=metric"
+)
 
-        st.markdown("---")
-        st.header("🤖 Health Precautions & Lifestyle Tips")
-        st.markdown(f"""
-        ### 🩺 Health Precautions
-        - Current condition: {condition}. Avoid prolonged outdoor exposure if air quality is poor.
-        - Temperature: {temp}°C (feels like {feels_like}°C) — stay hydrated.
-        - Humidity: {humidity}% — drink enough water to prevent dehydration.
-        
-        ### 👕 Clothing Tips
-        - Light, breathable fabrics (cotton, linen), light-colored clothing, sunglasses or hat.
-        
-        ### 🍴 Food & Hydration
-        - Eat hydrating foods: watermelon, cucumber, oranges, leafy greens.
-        - Avoid heavy, oily, or spicy foods.
-        
-        ### 🌈 Lifestyle & Activity
-        - Exercise in early morning or evening.
-        - Reduce outdoor exposure during extreme heat/cold or poor air quality.
-        """)
+try:
+    res = requests.get(weather_url, timeout=10)
+    res.raise_for_status()
+    data_we = res.json()
+except requests.exceptions.RequestException as e:
+    st.error(f" Unable to fetch weather data: {e}")
+    st.stop()
 
-    # --- Map Section using PyDeck (without Mapbox token) ---
-    with col2:
-        st.header("🗺️ Your Location on Map")
-        df = pd.DataFrame({'lat': [lat], 'lon': [lon], 'label': [f"{name} 📍"]})
-        view_state = pdk.ViewState(latitude=lat, longitude=lon, zoom=11, pitch=30)
-        layer = pdk.Layer(
-            "ScatterplotLayer",
-            data=df,
-            get_position=["lon", "lat"],
-            get_color=[255, 0, 0, 200],
-            get_radius=800,
-            pickable=True
+
+city = data_we.get("name", "Unknown Area")  
+weather_info = data_we.get("weather", [{}])[0]
+weather_desc = weather_info.get("description", "N/A").title()
+icon = weather_info.get("icon", "01d")
+
+main = data_we.get("main", {})
+temp = main.get("temp", "N/A")
+humidity = main.get("humidity", "N/A")
+wind_speed = data_we.get("wind", {}).get("speed", 0)
+icon_url = f"http://openweathermap.org/img/wn/{icon}@2x.png"
+
+
+col_map, col_weather = st.columns([1.2, 1.3])
+
+with col_map:
+    st.subheader(" Your Location")
+    st.map([{"lat": lat, "lon": lon}])
+
+with col_weather:
+    st.subheader(f" Weather — {city}")
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        st.image(icon_url, width=90)
+    with c2:
+        st.markdown(f" Condition: **{weather_desc}**")
+        st.metric(" Temperature", f"{temp}°C")
+        st.metric(" Humidity", f"{humidity}%")
+        st.metric(" Wind Speed", f"{wind_speed} m/s")
+
+
+st.divider()
+st.subheader(" Natural Comfort Summary")
+
+if isinstance(temp, (int, float)):
+    summary = ""
+    
+    if temp < 0:
+        summary = (
+            " Extremely cold! Wear thermal layers, insulated jackets, gloves, and a hat. "
+            "Stay indoors if possible; frostbite risk. Keep extremities covered."
         )
-        deck = pdk.Deck(
-            map_style="light",  # Use built-in light style (no Mapbox token needed)
-            initial_view_state=view_state,
-            layers=[layer],
-            tooltip={"text": "{label}"}
+        st.info(summary)
+    elif 0 <= temp < 10:
+        summary = (
+            " Very cold — dress warmly with a coat, scarf, and gloves. "
+            "Limit prolonged outdoor exposure and keep moving to stay warm."
         )
-        st.pydeck_chart(deck, use_container_width=True)
+        st.warning(summary)
+    elif 10 <= temp < 18:
+        summary = (
+            " Cool and pleasant — a light jacket or sweater is recommended. "
+            "Good for outdoor activities; carry an extra layer for evenings."
+        )
+        st.info(summary)
+    elif 18 <= temp < 26:
+        summary = (
+            " Ideal weather — wear comfortable clothes like t-shirts and trousers. "
+            "Perfect for outdoor exercise and work."
+        )
+        st.success(summary)
+    elif 26 <= temp < 32:
+        if humidity > 70:
+            summary = (
+                " Warm and humid — wear breathable cotton clothes. "
+                "Stay hydrated and avoid strenuous outdoor activity during peak heat."
+            )
+            st.warning(summary)
+        else:
+            summary = (
+                " Slightly warm — light, breathable clothing is recommended. "
+                "Drink water regularly."
+            )
+            st.info(summary)
+    elif 32 <= temp < 38:
+        summary = (
+            " Hot — wear loose, light clothing, a hat, and sunglasses. "
+            "Drink plenty of water and avoid heavy outdoor work."
+        )
+        st.warning(summary)
+    else:
+        summary = (
+            " Extreme heat! Minimal light clothing; stay in shaded or air-conditioned areas. "
+            "Avoid direct sun exposure — risk of heatstroke."
+        )
+        st.error(summary)
 
+    if "rain" in weather_desc.lower():
+        st.info(" Carry an umbrella or raincoat. Stay dry to avoid colds.")
+    if "snow" in weather_desc.lower():
+        st.info(" Wear waterproof boots and warm clothing. Be careful on slippery surfaces.")
+    if wind_speed > 10:
+        st.info(" Strong winds — wear windproof jackets and secure loose items.")
 else:
-    st.error(f"Error fetching weather: {response.get('message')}")
+    st.warning(" Unable to determine temperature.")
+
+
 
 
