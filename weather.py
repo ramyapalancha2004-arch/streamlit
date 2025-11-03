@@ -140,7 +140,3 @@ if isinstance(temp, (int, float)):
         st.info(" Strong winds — wear windproof jackets and secure loose items.")
 else:
     st.warning(" Unable to determine temperature.")
-
-
-
-
